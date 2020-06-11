@@ -1,7 +1,6 @@
 import path from 'path';
-import webpack from 'webpack';
+import { Configuration } from 'webpack';
 import ManifestPlugin from 'webpack-manifest-plugin';
-import OpenBrowserPlugin from 'open-browser-webpack-plugin';
 import cssnano from 'cssnano';
 
 import { SERVER_PORT, IS_DEV, WEBPACK_PORT } from './src/server/config';
@@ -11,31 +10,37 @@ const plugins = [new ManifestPlugin()];
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 // plugins.push(new BundleAnalyzerPlugin());
 
-if (IS_DEV) {
-  plugins.push(new OpenBrowserPlugin({ url: `http://localhost:${SERVER_PORT}` }));
-}
-
 const nodeModulesPath = path.resolve(__dirname, 'node_modules');
+const targets = IS_DEV ? { chrome: '79', firefox: '72' } : '> 0.25%, not dead';
 
-const config: webpack.Configuration = {
+const config: Configuration = {
   mode: IS_DEV ? 'development' : 'production',
   devtool: IS_DEV ? 'inline-source-map' : false,
-  entry: ['@babel/polyfill', './src/client/client'],
+  entry: ['./src/client/client'],
   output: {
     path: path.join(__dirname, 'dist', 'statics'),
     filename: `[name]-[hash:8]-bundle.js`,
+    chunkFilename: '[name]-[hash:8]-bundle.js',
     publicPath: '/statics/',
   },
   resolve: {
     extensions: ['.js', '.ts', '.tsx'],
   },
   optimization: {
+    minimize: !IS_DEV,
     splitChunks: {
       cacheGroups: {
-        commons: {
+        vendors: {
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors',
           chunks: 'all',
+          priority: 10,
+        },
+        material: {
+          test: /[\\/]node_modules[\\/]@material-ui[\\/]/,
+          name: 'material-ui',
+          chunks: 'all',
+          priority: 20,
         },
       },
     },
@@ -44,8 +49,20 @@ const config: webpack.Configuration = {
     rules: [
       {
         test: /\.tsx?$/,
-        loaders: ['babel-loader'],
         exclude: [/node_modules/, nodeModulesPath],
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [['@babel/env', { modules: false, targets }], '@babel/react', '@babel/typescript'],
+            plugins: [
+              '@babel/proposal-numeric-separator',
+              '@babel/plugin-transform-runtime',
+              ['@babel/plugin-proposal-decorators', { legacy: true }],
+              ['@babel/plugin-proposal-class-properties', { loose: true }],
+              '@babel/plugin-proposal-object-rest-spread',
+            ],
+          },
+        },
       },
       {
         test: /\.css$/,
@@ -57,7 +74,7 @@ const config: webpack.Configuration = {
             loader: 'css-loader',
             options: {
               modules: true,
-              camelCase: true,
+              localsConvention: 'camelCase',
               sourceMap: IS_DEV,
             },
           },
@@ -78,10 +95,13 @@ const config: webpack.Configuration = {
   },
   devServer: {
     port: WEBPACK_PORT,
+    overlay: IS_DEV,
+    open: IS_DEV,
+    openPage: `http://localhost:${SERVER_PORT}`,
   },
   plugins,
   externals: {
-    'react': 'React',
+    react: 'React',
     'react-dom': 'ReactDOM',
   },
 };

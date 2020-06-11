@@ -2,14 +2,15 @@ import Card from '@material-ui/core/Card';
 import CardHeader from '@material-ui/core/CardHeader';
 import Typography from '@material-ui/core/Typography';
 import { createShallow } from '@material-ui/core/test-utils';
-import * as React from 'react';
+import React from 'react';
 import { IUserDTO } from '../../shared/IUserDTO';
 import { User } from './User';
 
 describe('<User/>', () => {
   const user: IUserDTO = {
     userId: '123',
-    userName: 'Gil Amran',
+    firstName: 'Gil',
+    lastName: 'Amran',
     imageUrl: '/statics/gil.jpg',
   };
   const MUIShallow = createShallow();
